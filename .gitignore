@@ -1,0 +1,12 @@
+# Kit and build outputs — not part of the entry
+kit/
+build-output/
+build-output-repeat/
+revision-output/
+revision-output-repeat/
+final-output/
+node_modules/
+.makefun/
+
+# Local harness runtime config (points at this machine's local key proxy; not entry code)
+opencode.json
