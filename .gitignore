@@ -7,6 +7,14 @@ revision-output-repeat/
 final-output/
 v2-output-a/
 v2-output-b/
+v3-preview*/
+v3-output-a/
+v3-output-b/
+v3-browser-profile/
+v3-evidence/probe*
+v3-evidence/radar-v3.csv
+v3-evidence/radar-v3.json
+v3-evidence/v3-evidence.json
 node_modules/
 .makefun/
 

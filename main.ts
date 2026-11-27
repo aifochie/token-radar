@@ -1,12 +1,12 @@
 // Node 22, standard library only. Local run:
-// node main.ts --input kit/input/snapshot.json --output v2-output-a
+// node main.ts --input kit/input/snapshot.json --output v3-output-a
 // --screenshots selects existing images; it never captures or fabricates one.
 import { copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { boardIssue, dataScript, parseSnapshot } from './lib/model.ts';
-import { buildV2 } from './lib/v2.ts';
+import { buildV3, dossierProof } from './lib/v3.ts';
 import { buildDossier, PLAIN_NAME } from './vendor/makefun-board.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
@@ -63,7 +63,7 @@ function run(): void {
   if (existsSync(out) && (!lstatSync(out).isDirectory() || readdirSync(out).length)) throw new Error('output must be an empty directory or a new path');
 
   const snapshot = parseSnapshot(readFileSync(inputFile, 'utf8'));
-  const { board, radar } = buildV2(snapshot);
+  const { board, radar } = buildV3(snapshot);
   const snapshotSha = createHash('sha256').update(readFileSync(inputFile)).digest('hex');
   const issue = boardIssue(board, snapshot);
   if (issue !== null) throw new Error(`board refused: ${issue}`);
@@ -74,13 +74,18 @@ function run(): void {
   if (shots.length < 3 || shots.length > 4 || shots.some((p) => basename(p) !== p || !/\.(png|jpe?g)$/i.test(p))) throw new Error('screenshots must contain 3–4 existing PNG/JPEG files at its top level');
 
   mkdirSync(out, { recursive: true });
-  writeFileSync(join(out, 'board.json'), `${JSON.stringify({ rows: board })}\n`);
-  writeFileSync(join(out, 'data.js'), dataScript({ ...radar, snapshot_sha256: snapshotSha } as any));
+  const sha = (b: string | Buffer) => createHash('sha256').update(b).digest('hex');
+  const boardText = `${JSON.stringify({ rows: board })}\n`;
+  const provenance = { board_sha256: sha(boardText), main_sha256: sha(readFileSync(join(here, 'main.ts'))),
+    model_sha256: sha(readFileSync(join(here, 'lib/v3.ts'))), snapshot_sha256: snapshotSha };
+  writeFileSync(join(out, 'board.json'), boardText);
+  writeFileSync(join(out, 'data.js'), dataScript({ ...radar, snapshot_sha256: snapshotSha, provenance } as any));
   copyTree(dashboard, join(out, 'dashboard'), sourceFiles);
-  writeFileSync(join(out, 'dashboard', 'proof.json'), JSON.stringify({ snapshot_sha256: snapshotSha, validation: radar.validation, odds: radar.odds_model, accounting: radar.accounting }) + '\n');
-  copyFileSync(join(here, 'lib/v2.ts'), join(out, 'dashboard', 'model.txt'));
+  writeFileSync(join(out, 'dashboard', 'proof.json'), JSON.stringify({ ...dossierProof(snapshot, radar, snapshotSha), provenance }) + '\n');
+  const engine = readFileSync(join(here, 'lib/v3.ts'), 'utf8');
+  writeFileSync(join(out, 'dashboard', 'model.txt'), engine.slice(0, engine.indexOf('const xerror')) + engine.slice(engine.indexOf('export const ECON'), engine.indexOf('export function accountingFor')));
   const dashboardBytes = plainTree(join(out, 'dashboard')).reduce((n, file) => n + readFileSync(join(out, 'dashboard', file)).length, 0);
-  if (dashboardBytes > 65_536) throw new Error(`dashboard source exceeds 64 KiB: ${dashboardBytes}`);
+  if (dashboardBytes > 64_000) throw new Error(`dashboard source exceeds 64,000 bytes: ${dashboardBytes}`);
   copyTree(screenshots, join(out, 'screenshots'), shots);
   const dossier = buildDossier(out, {
     text_max_bytes: 65_536,
@@ -92,6 +97,7 @@ function run(): void {
   writeFileSync(join(out, 'dossier.json'), dossier);
   process.stdout.write(`token radar: ${board.length} rows; ${snapshot.watchlist.length}/${snapshot.watchlist.length} watchlist covered; ${radar.early_size} additional candidates\n`);
   process.stdout.write(`token radar: wrote board.json, data.js, dashboard/, screenshots/ (${shots.length} supplied images), dossier.json (${dossier.byteLength} bytes) to ${out}\n`);
+  process.stdout.write(`token radar: ${radar.validation.selected_engine}; dashboard ${dashboardBytes} bytes; complete fold ledgers in data.js and dossier proof.json\n`);
   if (args.screenshots) process.stdout.write('token radar: external screenshot directory supplied; verify that these images match the generated page before submission\n');
 }
 

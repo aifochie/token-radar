@@ -1,0 +1,166 @@
+{
+  "started": "2026-11-27T16:02:15.047Z",
+  "completed": "2026-11-27T16:02:22.964Z",
+  "browser": "Chrome/158.0.8127.88",
+  "executable": "/home/hatch/sepuh1/bengkel/projects/scratch-tr3/browser-cache/chrome/linux-158.0.8127.88/chrome-linux64/chrome",
+  "rendered_output": "/home/hatch/sepuh1/bengkel/projects/token-radar/v3-output-a",
+  "board_sha256": "6a8c91d7a61499a82bebbe8d63d0474441f13ee2002f6f1dea4f1193c01f52a0",
+  "data_sha256": "d6bfb5318c490790081266664b67412d8b3fec3d079fd414d51e20408ffff5ae",
+  "dashboard_sources": {
+    "app.css": "cc9d5699c44f8b6dfaf315f49ce1eacecd2d5f669e59a7d477fddbcc14197ee4",
+    "app.js": "0afcf9983cc8ca0272bb4d6936b7fb7bf3970c0fbc2a022d52ed033428926a87",
+    "index.html": "4ba3235fb19271d904d1689cc820a830d64a1933b5fcea768856d105e5bb70a1",
+    "method.txt": "2f7aa4c299f03cc0cd2730fc957f88faca7041dbd55970e3bdd814c7526e0dd1",
+    "model.txt": "42ab6731609b22bf68d27bb7c2e991f359ffbd84664218a58726bb6722cf851b",
+    "proof.json": "8438a377bafab15ed4484dc0e441d7da5b4a00ad16b7fff1fbf6a1709b6fe7e5"
+  },
+  "boardState": {
+    "top": "steakhouse-financial",
+    "columns": 11,
+    "kpis": 6,
+    "visibleRows": 11,
+    "tableTop": 494,
+    "scrollWidth": 1280,
+    "viewport": [
+      1280,
+      900
+    ],
+    "integrity": {
+      "totals": true,
+      "checksum": true,
+      "ledger": true,
+      "board_sha256": "6a8c91d7a61499a82bebbe8d63d0474441f13ee2002f6f1dea4f1193c01f52a0"
+    },
+    "presetCounts": [
+      "Conservative$10,000 · 7.0% drop · 12w0 FARM0 MARGINAL198 SKIP",
+      "Mid · default$50,000 · 15.0% drop · 12w16 FARM86 MARGINAL96 SKIP",
+      "Aggressive$50,000 · 25.0% drop · 12w99 FARM52 MARGINAL47 SKIP"
+    ],
+    "selected": "Mid",
+    "evidenceTables": [
+      7,
+      6,
+      7
+    ]
+  },
+  "detailState": {
+    "name": "Steakhouse Financial",
+    "planSteps": 6,
+    "peers": 6,
+    "decomposition": 7,
+    "visibleMatrixCells": 12,
+    "lastPlanBottom": 837.328125,
+    "detailBottom": 939.71875,
+    "scrollWidth": 1280
+  },
+  "filterState": {
+    "rows": [
+      "anemoy-capital",
+      "steer-protocol",
+      "fstswap",
+      "bucket-cdp",
+      "vesu",
+      "katana-dex",
+      "binaryx-platform",
+      "bend",
+      "syncswap",
+      "metalx-swap",
+      "byreal",
+      "granite",
+      "btcfi-cdp",
+      "nucleus",
+      "boros",
+      "stablehodl"
+    ],
+    "summary": "FARM SHORTLIST16 rows · Mid · $50,000 / 15.0% / 12wCSV ↓JSON ↓",
+    "hash": "#verdict=FARM",
+    "selected": "Mid"
+  },
+  "scenarioQA": {
+    "rows": 198,
+    "scenarios": 4,
+    "comparisons": 792,
+    "grid": [
+      {
+        "deposit": 10000,
+        "share": 0.07,
+        "counts": {
+          "FARM": 0,
+          "MARGINAL": 0,
+          "SKIP": 198
+        }
+      },
+      {
+        "deposit": 50000,
+        "share": 0.15,
+        "counts": {
+          "FARM": 16,
+          "MARGINAL": 86,
+          "SKIP": 96
+        }
+      },
+      {
+        "deposit": 50000,
+        "share": 0.25,
+        "counts": {
+          "FARM": 99,
+          "MARGINAL": 52,
+          "SKIP": 47
+        }
+      }
+    ]
+  },
+  "detailQA": {
+    "details": 198,
+    "cells": 2376,
+    "failures": []
+  },
+  "controlsQA": {
+    "customRows": 198,
+    "slidersLive": true,
+    "emptySearch": true,
+    "category": true,
+    "sort": true,
+    "pricedCount": 119
+  },
+  "exportsQA": {
+    "radar-v3.csv": {
+      "bytes": 39054,
+      "sha256": "7466c153323bdff00991b2c8472e4e2f7d63560d944466dfd3ce151bb14d3d2c"
+    },
+    "radar-v3.json": {
+      "bytes": 1330930,
+      "sha256": "d2a54962481d2ea682356ea1c2e32ccf768ad7f171f7b21a611995f292bb752a"
+    },
+    "v3-evidence.json": {
+      "bytes": 152430,
+      "sha256": "42e66a5fe1132f436f0afbfc16831c0e69af5ed357e4ed7ac38a931e8f6fe78a"
+    }
+  },
+  "errors": [],
+  "network": [],
+  "captures": [
+    {
+      "name": "1-board.png",
+      "bytes": 252682,
+      "width": 1280,
+      "height": 900,
+      "sha256": "9d70d8374f94daab6305c0ef5370eb8dd2c0b844e7da70723bc401b45d8fc702"
+    },
+    {
+      "name": "2-detail.png",
+      "bytes": 233630,
+      "width": 1280,
+      "height": 900,
+      "sha256": "6fb207c041e47f3d94d1134b1c65d555e408b2d381003b1f56c3345ce81cd9d3"
+    },
+    {
+      "name": "3-filtered.png",
+      "bytes": 250987,
+      "width": 1280,
+      "height": 900,
+      "sha256": "226f60d3ef0d118a93a02151a8d1661120e8d36a0d1d6499f57fe3b433a7130a"
+    }
+  ],
+  "layout_pass": true
+}

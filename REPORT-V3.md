@@ -1,6 +1,6 @@
 # MISI V3 — Token Radar / fitted engine
 
-Status bertahap: **A — mesin LOLOS guard; B dan C belum selesai.** Belum ada klaim siap submit atau dev grade. Sesi OpenCode native: `ses_de5883638ffeHfJ0CgenXtei7A` (metadata session diperiksa langsung, tanpa membuat transcript atau run record). Baseline v2 tersimpan dalam commit lokal `351d1df` (`v2 baseline`).
+Status bertahap: **A LOLOS guard; B LOLOS; C belum dijalankan.** Belum ada klaim siap submit atau dev grade. Sesi OpenCode native: `ses_de5883638ffeHfJ0CgenXtei7A` (metadata session diperiksa langsung, tanpa membuat transcript atau run record). Baseline v2 tersimpan dalam commit lokal `351d1df` (`v2 baseline`). Checkpoint A: `5568061`.
 
 ## Checkpoint A — fitted ridge value + logit odds
 
@@ -76,3 +76,67 @@ Keputusan ini mengubah skenario tampilan secara transparan. `board.json` tetap m
 ### Status artefak pada penutupan A
 
 `evaluate-v3` selesai sekitar 16,8 detik, `boardIssue = null`, 198 row, semua watchlist tercakup dalam builder. Pada checkpoint ini integrasi entrypoint v3, dossier final, dashboard, capture baru, dua build identik dan check kit **masih pekerjaan B/C**, belum diklaim lolos. Nilai byte dashboard, SHA capture dan tally kit akan ditulis setelah benar-benar tersedia. Tidak ada push, submit, signing, wallet, API make.fun, atau run record buatan.
+
+## Checkpoint B — LOLOS / grid terbuka dan capture build yang sama
+
+Entry point sekarang memakai `buildV3`. Dua output bersih `v3-output-a/` dan `v3-output-b/` berisi **198 row**, **40/40** watchlist, 158 early rows. `board.json` membawa value-if-launches, score record, implied odds-weighted, kedua pasangan kuantil conditional dan weighted, serta verdict/net/net per jam pada dasar brief asli. Default frontend **Mid** dinyatakan pada kartu skenario, kontrol, detail dan ekspor. Semua komposisi verdict di tabel A dikonfirmasi browser, tanpa perubahan `ECON`, rumus atau hurdle. Validator mengunci objek ECON persis terhadap konstanta A.
+
+### Bukti halaman dan kalkulasi
+
+- Enam KPI kualitas, tiga tabel terbuka (7 kandidat nilai, 6 kandidat odds, 7 baris kejujuran range/benchmark), accounting bar dan tiga pemeriksaan integritas aktif.
+- Accounting saling lepas: ranked no-token 198 + recorded/unpriced atau CEX 297 + priced peers 119 + wrapped/versioned 16 + bridge 43 + exchange 42 + liquid staking/restaking 43 = **758**. Off-list/parent unknown **0 dalam bucket sisa**; bukan klaim tidak ada parent. Snapshot tidak membawa parentProtocol; beberapa row off-watchlist tetap ranked dan parent bawah floor tidak dapat diidentifikasi.
+- Browser menghitung ulang SHA-256 serialisasi board dan mencocokkannya dengan checksum yang ditulis `main.ts`; pemeriksaan totals/uniknya accounting dan kelengkapan ledger semua split juga true. Main SHA ditampilkan dan diverifikasi validator.
+- Board **11 kolom**, **11 row penuh terlihat** pada viewport 1280×900, table top y=494, tanpa overflow horizontal. CSV dan JSON memakai skenario aktif; Evidence JSON membawa semua ledger dan koefisien. Seluruhnya unduhan browser yang benar-benar diuji.
+- Kontrol deposit, drop share, horizon, preset, tab verdict, pencarian/empty state, kategori, sorting TVL dan pemisahan 119 priced benchmarks diuji. Browser memeriksa **198 row × 4 skenario = 792** hasil ekonomi melawan `economicCase`, termasuk Custom $25.000/10,5%/26 minggu.
+- Semua **198 detail** dan **2.376 sel matriks** diuji. Detail rank 1 memiliki dekomposisi 7 kandidat dengan dampak log/faktor dan anotasi LOO/WF, 6 peers terdekat, rentang conditional/weighted, hurdle T-bill, 12 sel matriks, 6 langkah bertipe serta chip biaya/waktu dan aturan exit. Plan terakhir berakhir y=837,33; seluruh matriks dan exit rule terlihat. Footer umum berada di bawah viewport (y=939,72); tidak diklaim terlihat.
+- **0 page error, 0 request HTTP(S)** dari halaman. UI odds berlabel klasifikasi record, bukan peluang launch.
+
+### Source dan dossier
+
+| Source dashboard output | Byte |
+| --- | ---: |
+| app.css | 7.777 |
+| app.js | 22.790 |
+| index.html | 564 |
+| method.txt | 1.127 |
+| model.txt — fungsi fitting dan ekonomi persis dari lib/v3.ts | 8.215 |
+| proof.json — tabel dan ledger lengkap | 23.408 |
+| **Total** | **63.881** |
+
+Total source di bawah **64.000 byte**, sisa 119 byte. Dossier text **64.369 byte**, tanpa truncation; dossier total **1.049.837 byte**, 3 gambar. Builder vendor dan builder kit mereproduksi dossier byte-identical. Seluruh fold tetap disertakan: 119 LOO + 63 WF nilai, dan 419 target odds dengan LOO/ten-fold serta 320 target WF. `proof.json` mengodekan bilangan dolar tepat sebagai base36 reversible; probabilitas dossier enam desimal, dengan error pembulatan diuji ≤0,500001×10⁻⁶. Payload `data.js` dan ekspor Evidence JSON menyimpan ledger kaya dengan probabilitas tepat, label, jumlah training dan base rate setiap fold. Tidak ada target dibuang demi anggaran source.
+
+Source draft sempat 70.579 byte. Penghematan berasal dari prosa/CSS, encoding ledger reversible dan menampilkan bagian source fitting+ekonomi di `model.txt`; kode evaluasi, assembly dan packing lengkap tetap di repo `lib/v3.ts` yang SHA-nya terikat ke output. Semua tabel ablasi, Brier dan coverage tetap di dossier dan halaman.
+
+### Capture asli
+
+Puppeteer existing 25.19.0 dan Chrome **158.0.8127.88** dari `../scratch-tr3/`, `pipe:true`, offline, viewport 1280×900, device scale 1. Capture final benar-benar merender **`v3-output-a/dashboard/index.html`**, 27 November 2026 **16:02:15–16:02:23 UTC**. File di `screenshots/` mengganti capture v2, byte-identical dengan yang disalin kedua output dan yang di-embed dossier. Tidak ada fixture, sintesis, atau pengeditan PNG.
+
+| Capture | Dimensi | Byte | SHA-256 |
+| --- | --- | ---: | --- |
+| screenshots/1-board.png | 1280×900 | 252.682 | `9d70d8374f94daab6305c0ef5370eb8dd2c0b844e7da70723bc401b45d8fc702` |
+| screenshots/2-detail.png | 1280×900 | 233.630 | `6fb207c041e47f3d94d1134b1c65d555e408b2d381003b1f56c3345ce81cd9d3` |
+| screenshots/3-filtered.png | 1280×900 | 250.987 | `226f60d3ef0d118a93a02151a8d1661120e8d36a0d1d6499f57fe3b433a7130a` |
+
+Board/detail adalah rank 1 Steakhouse Financial; filter FARM menampilkan **16 row Mid**. Bukti Chrome, waktu, hash semua source/data/board, pemeriksaan layout, seluruh skenario dan unduhan: `v3-evidence/capture-v3.json`.
+
+### Dua run dan validasi
+
+```sh
+node main.ts --input kit/input/snapshot.json --output v3-output-a
+node main.ts --input kit/input/snapshot.json --output v3-output-b
+node scripts/capture-v3.mjs v3-output-a
+node scripts/run-validation-v3.mjs v3-output-a v3-output-b a
+node scripts/run-validation-v3.mjs v3-output-b v3-output-a b
+```
+
+Kedua arah validator **exit 0**: **12/12 file byte-identical, 0 beda**. Board **1.220.080 byte**, 6 farm steps per row, panjang 178–591 karakter. Uji struktur board, refit seluruh ablasi, band held-out, ekonomi independen, freeze ECON, decoder ledger, sumber capture, CRC/decompress PNG, dossier vendor, order invariance dan missing-screenshot fail-before-write lolos. Bukti utuh: `v3-evidence/validate-a.json` dan `validate-b.json`.
+
+- Board SHA-256: `6a8c91d7a61499a82bebbe8d63d0474441f13ee2002f6f1dea4f1193c01f52a0`.
+- Data SHA-256: `d6bfb5318c490790081266664b67412d8b3fec3d079fd414d51e20408ffff5ae`.
+- Dossier SHA-256: `f54c62b23fd5b9373b06c1b827ceef8913186aecbd063b5b9a80e2cb0f393ad4`.
+- Main SHA-256: `085c9d9e36b409ec1510d66091b207589e8075f2be5240210d573285915b8a0c`.
+- Model SHA-256: `cb32a5f08d562a8b3b607e9421d90cec3f9a14e3d88c2ee2dcdb9d6241991a4e`.
+
+Kegagalan pengembangan yang diperbaiki: satu kurung JavaScript berlebih, path package Puppeteer berbeda dari asumsi, event download CDP lama yang tidak terbit meski file telah terunduh, dan validator raw-object yang membedakan `-0` dari `0` sesudah JSON menormalkannya. Pemeriksaan order invariance kini membandingkan bentuk serialisasi JSON yang memang merupakan kontrak output; tidak ada nilai model atau gate data yang dilonggarkan. Output/source draft yang melewati byte limit ditolak, lalu dipangkas nyata.
+
+Sisa masalah pada penutupan B: check kit belum dijalankan; run record/context pengemasan tetap urusan mandor. Coverage P10–P90 WF hanya 73,02% terhadap nominal 80%; odds bukan launch forecast; validasi masih reuse split. Tidak ada klaim jaminan return, independensi penuh, dev rank, atau siap submit.

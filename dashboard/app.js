@@ -1,161 +1,83 @@
-// Latent Magnet v2. Offline UI reads the exact emitted board; all model code,
-// ablations and held-out target/prediction ledgers are included in this dossier.
+/* Offline V3: all economics derive from the emitted board; no launch claim. */
 (() => {
   'use strict';
-  const D = window.RADAR, root = document.getElementById('board');
-  if (!D) { root.textContent = 'Build main.ts, then open output/dashboard/index.html.'; return; }
-  const state = { q: '', category: 'all', verdict: 'all', view: 'radar', sort: 'rank', dir: 1, p: '' };
-  const usd = n => !Number.isFinite(n) ? '—' : (n < 0 ? '−' : '') + '$' + (Math.abs(n) >= 1e9 ? (Math.abs(n) / 1e9).toFixed(2) + 'B' : Math.abs(n) >= 1e6 ? (Math.abs(n) / 1e6).toFixed(1) + 'M' : Math.abs(n) >= 1e3 ? (Math.abs(n) / 1e3).toFixed(1) + 'K' : Math.abs(n).toFixed(0));
-  const cash = n => (n < 0 ? '−' : '') + '$' + Math.abs(n).toFixed(2);
-  const pct = n => n === null ? '—' : (n > 0 ? '+' : '') + n.toFixed(1) + '%';
-  const prob = n => (100 * n).toFixed(1) + '%';
-  const age = n => n === null ? 'unknown' : n >= 365 ? (n / 365).toFixed(1) + 'y' : n + 'd';
-  const x = n => n.toFixed(3) + '×';
-  const sum = (rs, key) => rs.reduce((n, r) => n + r[key], 0);
-  function el(tag, attrs, ...kids) {
-    const node = document.createElement(tag);
-    Object.entries(attrs || {}).forEach(([k, v]) => {
-      if (k === 'text') node.textContent = v;
-      else if (k === 'class') node.className = v;
-      else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
-      else if (v !== null && v !== undefined) node.setAttribute(k, String(v));
-    });
-    kids.flat(Infinity).filter(k => k !== null && k !== undefined).forEach(k => node.appendChild(typeof k === 'string' ? document.createTextNode(k) : k));
-    return node;
+  const D = window.RADAR, V = D.validation, root = document.getElementById('board');
+  const presets = [{name:'Conservative',deposit:10000,share:.07},{name:'Mid',deposit:50000,share:.15},{name:'Aggressive',deposit:50000,share:.25}];
+  const state = {q:'',category:'all',verdict:'all',view:'radar',p:'',sort:'rank',dir:1,deposit:50000,share:.15,weeks:12};
+  const usd = n => '$' + (Math.abs(n)>=1e9 ? (n/1e9).toFixed(2)+'B' : Math.abs(n)>=1e6 ? (n/1e6).toFixed(1)+'M' : Math.abs(n)>=1e3 ? (n/1e3).toFixed(1)+'K' : n.toFixed(0));
+  const cash = n => (n<0?'−':'')+'$'+Math.abs(n).toLocaleString('en-US',{maximumFractionDigits:0});
+  const pct = n => n==null?'—':n.toFixed(1)+'%', prob = n => (n*100).toFixed(1)+'%', x = n => n.toFixed(3)+'×';
+  function el(tag, attrs, ...children) {
+    const n = document.createElement(tag);
+    for (const [k,v] of Object.entries(attrs||{})) { if(k==='text')n.textContent=v; else if(k.startsWith('on'))n.addEventListener(k.slice(2),v); else n.setAttribute(k,String(v)); }
+    function append(c){ if(c==null||c===false)return; if(Array.isArray(c))c.forEach(append);else n.appendChild(c.nodeType?c:document.createTextNode(String(c))); }
+    children.forEach(append);return n;
   }
-  const text = (tag, s, c = '') => el(tag, { text: s, class: c });
-  const badge = v => text('span', v, 'badge ' + v.toLowerCase());
-  const note = s => text('p', s, 'note');
-  function readHash() { const q = new URLSearchParams(location.hash.slice(1)); ['q', 'category', 'verdict', 'view', 'p'].forEach(k => state[k] = q.get(k) || ({ category: 'all', verdict: 'all', view: 'radar' }[k] || '')); }
-  function save() { const q = new URLSearchParams(); ['q', 'category', 'verdict', 'view', 'p'].forEach(k => { if (state[k] && !['all', 'radar'].includes(state[k])) q.set(k, state[k]); }); history.replaceState(null, '', '#' + q); }
-  function change(key, value) { state[key] = value; save(); render(); }
-  const head = () => el('header', { class: 'mast' }, el('div', { class: 'brand' }, text('b', 'LM', 'monogram'), text('b', 'LATENT MAGNET'), text('span', 'TOKEN RADAR / V2', 'muted')), text('span', 'SEALED ' + D.as_of + '  •  OFFLINE RESEARCH', 'mono muted'));
-  const kpi = (label, value, sub) => el('div', { class: 'kpi' }, text('span', label, 'eyebrow'), text('strong', value), text('small', sub));
-  function evidence() {
-    const a = D.validation.leave_one_out, b = D.validation.walk_forward;
-    const row = (label, n, v1, v2) => el('tr', null, text('td', label), text('td', n), text('td', v1), text('td', v2, 'accent'));
-    return el('section', { class: 'proof panel' }, el('div', { class: 'section-label' }, text('b', 'OUT-OF-SAMPLE / TARGET EXCLUDED'), text('span', 'median x-error ↓', 'muted')),
-      el('table', { class: 'mini', id: 'evidence' }, el('thead', null, el('tr', null, ['Test', 'n', 'v1', 'v2'].map(s => text('th', s)))), el('tbody', null,
-        row('Walk-forward¹', b.n, x(b.v1_x), x(b.v2_x)), row('Leave-one-out', a.n, x(a.v1_x), x(a.v2_x)),
-        row('P25–P75 hits²', a.n + ' / ' + b.n, 'LOO ' + prob(a.range_hits / a.n), 'WF ' + prob(b.range_hits / b.n)))),
-      text('small', '¹ Listing order, same-date features; not historical. ² Dispersion, not confidence. V1 terms retained.', 'micro'));
-  }
-  function accounting() {
-    const labels = ['Ranked no-token', 'Excluded no-token', 'Priced peers', 'Recorded / unpriced'];
-    const vals = Object.values(D.accounting);
-    return el('section', { class: 'account panel' }, el('div', { class: 'section-label' }, text('b', 'PROTOCOL ACCOUNTING'), text('span', D.universe_size + ' records • exhaustive', 'muted')),
-      el('div', { class: 'stack', role: 'img', 'aria-label': labels.map((s, i) => s + ' ' + vals[i]).join('; ') }, vals.map((n, i) => el('i', { class: 'segment s' + i, style: 'width:' + n / D.universe_size * 100 + '%' }))),
-      el('div', { class: 'legend' }, labels.map((s, i) => el('span', null, el('i', { class: 'dot s' + i }), text('b', vals[i]), ' ' + s))),
-      text('div', 'Odds pool: ' + D.odds_model.positives + ' priced + ' + D.odds_model.controls + ' no-token controls (CEX excluded). ' + D.odds_model.excluded_recorded_unpriced + ' missing-price outcomes excluded.', 'micro'),
-      text('div', 'No token recorded ≠ proof. Capital and rewards remain at risk.', 'micro'));
-  }
-  function filtered() {
-    const q = state.q.toLowerCase().trim();
-    return (state.view === 'priced' ? D.live : D.rows).filter(r => (state.category === 'all' || (r.category || 'Other') === state.category) &&
-      (state.verdict === 'all' || r.verdict === state.verdict) && (!q || [r.name, r.slug, r.category, ...r.chains].join(' ').toLowerCase().includes(q)));
-  }
-  function controls() {
-    const src = state.view === 'priced' ? D.live : D.rows;
-    const query = el('input', { id: 'q', type: 'search', value: state.q, placeholder: 'Search protocol, category, chain…', 'aria-label': 'Search protocols' });
-    query.addEventListener('input', () => { const n = query.selectionStart; change('q', query.value); const next = document.getElementById('q'); next.focus(); if (n !== null && next.type !== 'search') next.setSelectionRange(n, n); });
-    function select(id, values, label) {
-      const node = el('select', { id, 'aria-label': label }, values.map(([value, label]) => el('option', { value, text: label })));
-      node.value = state[id]; node.addEventListener('change', () => change(id, node.value)); return node;
-    }
-    return el('div', { class: 'controls' }, query,
-      select('category', [['all', 'All categories'], ...[...new Set(src.map(r => r.category || 'Other'))].sort().map(c => [c, c])], 'Category'),
-      select('verdict', [['all', 'All verdicts'], ['FARM', 'FARM only'], ['MARGINAL', 'MARGINAL only'], ['SKIP', 'SKIP only']], 'Economic verdict'),
-      el('div', { class: 'tabs' }, ['radar', 'priced'].map(v => el('button', { 'aria-pressed': state.view === v, onclick: () => { state.category = 'all'; state.verdict = 'all'; change('view', v); } }, v === 'radar' ? 'No token recorded' : 'Priced benchmarks'))),
-      el('button', { class: 'reset', onclick: () => { Object.assign(state, { q: '', category: 'all', verdict: 'all', view: 'radar', sort: 'rank', dir: 1 }); save(); render(); }, text: 'Reset' }));
-  }
-  function sortHead(key, label) {
-    return el('th', { 'aria-sort': state.sort === key ? state.dir > 0 ? 'ascending' : 'descending' : 'none' }, el('button', { onclick: () => { state.dir = state.sort === key ? -state.dir : key === 'name' || key === 'rank' ? 1 : -1; state.sort = key; render(); }, text: label + (state.sort === key ? state.dir > 0 ? ' ↑' : ' ↓' : '') }));
-  }
-  const lo = Math.log10(Math.min(...D.rows.map(r => r.implied_p25_usd))), hi = Math.log10(Math.max(...D.rows.map(r => r.implied_p75_usd)));
-  const pos = n => Math.max(0, Math.min(100, (Math.log10(n) - lo) / (hi - lo) * 100));
-  function rangebar(r) { return el('div', { class: 'rangebar', title: 'Common logarithmic value axis. Dot = point; segment = raw peer P25–P75.' }, el('i', { style: `left:${pos(r.implied_p25_usd)}%;width:${pos(r.implied_p75_usd) - pos(r.implied_p25_usd)}%` }), el('b', { style: `left:${pos(r.implied_value_usd)}%` })); }
-  function board(list) {
-    const value = r => r[state.sort] ?? (state.sort === 'growth' ? r.change_7d : null);
-    list = list.slice().sort((a, b) => { const av = value(a), bv = value(b); return av === null ? 1 : bv === null ? -1 : (av < bv ? -1 : av > bv ? 1 : 0) * state.dir || a.rank - b.rank; });
-    return el('div', { class: 'table-wrap panel' }, el('table', { class: 'radar-table', id: 'radar-table' },
-      el('colgroup', null, [5, 18, 8, 6, 7, 9, 11, 17, 9, 10].map(w => el('col', { style: 'width:' + w + '%' }))),
-      el('thead', null, el('tr', null, sortHead('rank', 'Rank / band'), sortHead('name', 'Protocol / record'), sortHead('tvl_usd', 'TVL'), sortHead('growth', '7d'), sortHead('age_days', 'No-token age¹'), sortHead('token_odds', 'Token odds²'), sortHead('implied_value_usd', 'If it launches'), sortHead('implied_p25_usd', 'Implied P25–P75 / log'), sortHead('verdict', 'Verdict'), sortHead('net_per_hour_usd', 'Net / hour³'))),
-      el('tbody', null, list.map(r => el('tr', { 'data-slug': r.slug, tabindex: 0, onclick: () => change('p', r.slug), onkeydown: e => { if (e.key === 'Enter') change('p', r.slug); } },
-        el('td', { class: 'rank' }, text('b', String(r.rank).padStart(2, '0')), text('small', r.rank_best + '–' + r.rank_worst)),
-        el('td', { class: 'protocol' }, text('b', r.name), el('small', null, badge(r.watchlist ? 'WATCH' : 'EARLY'), ' ' + (r.category || 'Other') + ' · ' + (r.chains[0] || '?'))),
-        text('td', usd(r.tvl_usd), 'num'), text('td', pct(r.change_7d), 'num ' + (r.change_7d >= 0 ? 'positive' : 'negative')),
-        el('td', { class: 'num' }, text('span', age(r.age_days)), text('small', 'listing proxy')),
-        el('td', { class: 'num', title: r.odds.priced + ' priced / ' + r.odds.cohort_n + ' category-age records; hierarchical prior ' + prob(r.odds.prior) }, text('b', prob(r.token_odds)), el('div', { class: 'oddsbar' }, el('i', { style: 'width:' + r.token_odds * 100 + '%' }))),
-        el('td', { class: 'num' }, text('b', usd(r.implied_value_usd), 'value'), text('small', x(r.implied_value_usd / r.tvl_usd) + ' TVL')),
-        el('td', { class: 'num' }, text('span', usd(r.implied_p25_usd) + ' – ' + usd(r.implied_p75_usd), 'range-label'), rangebar(r)),
-        el('td', null, badge(r.verdict)), el('td', { class: 'num ' + (r.net_usd >= 0 ? 'positive' : 'negative') }, text('b', cash(r.net_per_hour_usd)), text('small', 'net ' + cash(r.net_usd))))))));
-  }
-  function benchmarks(list) {
-    return el('section', { class: 'panel table-wrap' }, text('h2', 'Recorded token benchmarks / actual cap, not launch scenarios'),
-      el('table', { class: 'benchmark-table', id: 'benchmark-table' }, el('thead', null, el('tr', null, ['Protocol', 'Category', 'TVL', 'Recorded cap', 'Cap / TVL', 'Token identifier'].map(s => text('th', s)))),
-        el('tbody', null, list.slice().sort((a, b) => b.mcap_usd - a.mcap_usd).map(r => el('tr', null, text('td', r.name), text('td', r.category || 'Other'), text('td', usd(r.tvl_usd)), text('td', usd(r.mcap_usd)), text('td', x(r.mcap_usd / r.tvl_usd)), text('td', r.symbol || r.gecko_id))))));
-  }
-  function shortlist(list) {
-    return el('section', { class: 'shortlist' }, list.map(r => el('article', { class: 'panel' }, el('div', { class: 'section-label' }, text('b', r.name), badge(r.verdict)),
-      text('h2', cash(r.net_per_hour_usd) + '/h', 'positive'), note('Net ' + cash(r.net_usd) + ' after ' + cash(r.economics.total_cost_usd) + ' of assumed total cost. ' + prob(r.token_odds) + ' odds proxy × ' + usd(r.implied_value_usd) + ' × ' + (r.economics.wallet_share * 1e6).toFixed(1) + ' ppm.'),
-      text('p', r.farm_plan.action + ' · ' + usd(r.farm_plan.capital_budget_usd) + ' pilot · ' + r.farm_plan.observation_days + ' days · ' + r.farm_plan.total_minutes + ' min'),
-      note('Break-even allocation at $100: ' + (r.economics.breakeven_share_at_100 * 1e6).toFixed(2) + ' ppm. Base assumes 1 ppm; no allocation is established.'),
-      el('button', { class: 'primary', text: 'Inspect economics & plan →', onclick: () => change('p', r.slug) }))),
-      note('Shortlist values are conditional scenarios. Common token, eligibility and valuation risks make row totals unsuitable as portfolio return forecasts.'));
-  }
-  function overview() {
-    const list = filtered(), farms = D.rows.filter(r => r.verdict === 'FARM');
-    return [el('section', { class: 'intro' }, el('div', null, text('span', 'RESEARCH DESK / 02', 'eyebrow'), text('h1', 'Find value. Price the effort.')), text('p', 'A launch value is not a farming return. Compare the peer range, then let costs decide.', 'muted')),
-      el('section', { class: 'kpis' }, kpi('NO-TOKEN RADAR', D.board_size, D.early_size + ' beyond the watchlist'), kpi('WATCHLIST COVERED', D.watchlist_size + '/' + D.watchlist_size, 'snapshot floor is not the ceiling'), kpi('PRICED PEER RECORDS', D.calibration.global_peers, 'actual market caps • not FDV'), kpi('CONDITIONAL VALUE', usd(sum(D.rows, 'implied_value_usd')), 'sum of points • not expected cash'), kpi('FARM AT BASE CASE', farms.length + ' / ' + D.board_size, '1 ppm wallet share at $100 pilot'), kpi('VALIDATION GUARD', 'V1 RETAINED', 'all 4 terms • no error regression')),
-      el('div', { class: 'intelligence' }, accounting(), evidence()),
-      el('div', { class: 'integrity' }, text('b', '● INTEGRITY'), text('span', 'SEALED SHA ' + D.snapshot_sha256.slice(0, 12)), text('span', '40/40 mandatory rows'), text('span', 'Offline • no imported probabilities'), text('span', 'Odds = prevalence proxy; horizon uncalibrated')),
-      controls(), el('div', { class: 'results', id: 'filter-summary', 'data-rows': list.length }, text('b', state.verdict === 'FARM' ? 'FARM SHORTLIST' : state.view === 'priced' ? 'PRICED BENCHMARKS' : 'LAUNCH VALUE BOARD'), text('span', list.length + ' rows  /  TVL ' + usd(sum(list, 'tvl_usd')) + (state.view === 'radar' ? '  /  implied ' + usd(sum(list, 'implied_value_usd')) : '  /  cap ' + usd(sum(list, 'mcap_usd')))), text('span', 'Select a row for the full calculation →', 'muted')),
-      !list.length ? el('div', { class: 'panel empty', text: 'No protocol matches these filters. Use Reset to restore the board.' }) : state.view === 'priced' ? benchmarks(list) : board(list),
-      note('¹ Age since listing, not verified token-free lifetime. ² Snapshot prevalence-as-launch proxy. ³ Surplus after $15/h time cost, gas ceilings and capital charges. Rank band = interval envelope, not confidence.'),
-      state.verdict === 'FARM' ? shortlist(list) : null,
-      el('details', { class: 'panel methodology' }, text('summary', 'Model notebook / 16 ablations, odds estimator and economic assumptions'), note(D.validation.guard), note(D.validation.limitation),
-        el('table', { class: 'mini' }, el('thead', null, el('tr', null, ['Term removed from v1', 'LOO x-error', 'Walk x-error', 'Decision'].map(s => text('th', s)))), el('tbody', null, D.validation.term_decisions.map(t => el('tr', null, text('td', t.term), text('td', x(t.without.loo_x)), text('td', x(t.without.walk_x)), text('td', t.retained ? 'RETAIN' : 'DROP'))))),
-        note('Odds: ' + D.odds_model.positives + '/(' + D.odds_model.positives + '+' + D.odds_model.controls + ') pooled prior; category-age shrinkage strength ' + D.odds_model.strength + '; age cuts ' + D.odds_model.age_cut_days.join('/') + ' days.'), note(D.odds_model.warning), note('Complete executable model and target ledgers: model.txt and proof.json, included whole in the dossier. Budgets and allocations are scenarios, not data. See method.txt.'))];
-  }
-  // Shared economic scenario formula, checked against board.json by browser QA.
-  function scenario(r, deposit, share) {
-    const e = r.economics, c = D.econ, weight = Math.min(deposit / c.reference_capital, c.max_weight);
-    const cost = e.fee_ceiling_usd + deposit * c.opportunity_apr * e.horizon_days / 365 + deposit * c.capital_risk_rate + e.time_cost_usd;
-    const net = r.token_odds * r.implied_value_usd * share * weight - cost, hourly = net / (e.minutes / 60);
-    return { net, hourly, verdict: net <= 0 ? 'SKIP' : hourly >= c.farm_surplus_per_hour ? 'FARM' : 'MARGINAL' };
-  }
-  function detail(r) {
-    const m = r.model, e = r.economics, recomputed = Math.round(r.tvl_usd * m.peer_multiple * m.growth_multiplier * m.maturity_multiplier * m.completeness_multiplier);
-    const fact = (label, val) => el('div', null, text('span', label), text('b', val));
-    return [el('div', { class: 'detail-nav' }, el('button', { text: '← Back to radar', onclick: () => change('p', '') }), text('span', 'MODEL DOSSIER / RANK ' + r.rank + ' OF ' + D.board_size, 'eyebrow')),
-      el('section', { class: 'detail-hero' }, el('div', null, text('h1', r.name, 'detail-name'), text('p', (r.category || 'Other') + ' · ' + r.chains.join(', ') + ' · No token recorded · listed ' + (r.listed_at || 'unknown'), 'muted')), el('div', null, badge(r.verdict), text('small', e.verdict === 'SKIP' ? 'Costs exceed the central reward scenario' : 'Conditional economics; eligibility unknown', 'muted'))),
-      el('section', { class: 'kpis detail-kpis' }, kpi('IF IT LAUNCHES', usd(r.implied_value_usd), 'circulating-cap scenario'), kpi('PEER P25–P75', usd(r.implied_p25_usd) + '–' + usd(r.implied_p75_usd), r.value_range.source + ' · n=' + r.value_range.peer_count), kpi('TOKEN ODDS PROXY', prob(r.token_odds), r.odds.priced + '/' + r.odds.cohort_n + ' local priced / all'), kpi('EXPECTED DROP', cash(e.expected_drop_usd), (e.wallet_share * 1e6).toFixed(1) + ' ppm wallet share assumption'), kpi('NET / NET PER HOUR', cash(e.net_usd) + ' / ' + cash(e.net_per_hour_usd), e.horizon_days + 'd · ' + e.minutes + ' min · after time cost')),
-      el('div', { class: 'detail-grid' }, el('div', { class: 'detail-column' },
-        el('section', { class: 'panel figure' }, text('h2', '01 / How the figure is made'), el('div', { class: 'equation' }, fact('TVL', usd(r.tvl_usd)), fact('Blended cap/TVL', x(m.peer_multiple)), fact('Growth', x(m.growth_multiplier)), fact('Maturity', x(m.maturity_multiplier)), fact('Completeness', x(m.completeness_multiplier)), fact('Rounded value', usd(recomputed))),
-          note((recomputed === r.implied_value_usd ? '✓ Matches board.json. ' : 'MISMATCH. ') + m.peer_source + ', n=' + m.peer_count + '; 7d ' + pct(r.change_7d) + '; listed ' + r.age_days + ' days. All four v1 terms retained by held-out guard.'),
-          note('Range: TVL × raw ' + x(r.value_range.p25_multiple) + '–' + x(r.value_range.p75_multiple) + ' × signal factors ' + x(r.value_range.adjustment) + '. ' + r.value_range.source + ' (' + r.value_range.category_count + ' category peers). Dispersion ≠ confidence.'),
-          note('Odds = (' + r.odds.priced + ' + ' + r.odds.strength + ' × ' + prob(r.odds.prior) + ') / (' + r.odds.cohort_n + ' + ' + r.odds.strength + '). Age bucket ' + r.odds.age_bucket + '; cuts ' + D.odds_model.age_cut_days.join('/') + 'd. No horizon calibration.')),
-        el('section', { class: 'panel peers' }, text('h2', '02 / Nearest priced peers'), text('small', 'Up to 9 from the range pool, nearest |log TVL ratio|. All ' + r.value_range.peer_count + ' pool records set the range.', 'micro'),
-          el('table', { class: 'mini', id: 'nearest-peers' }, el('thead', null, el('tr', null, ['Peer / category', 'TVL', 'Cap', 'Cap/TVL', '7d'].map(s => text('th', s)))),
-            el('tbody', null, r.nearest_peers.map(p => el('tr', null, el('td', null, text('b', p.name), text('small', p.category || 'Other')), text('td', usd(p.tvl_usd)), text('td', usd(p.mcap_usd)), text('td', x(p.multiple)), text('td', pct(p.change_7d)))))),
-          note('Benchmarks / point: ' + x(r.implied_value_usd / r.tvl_usd) + ' TVL vs pooled ' + x(D.calibration.global_multiple) + '. Odds ' + prob(r.token_odds) + ' vs pooled ' + prob(D.odds_model.pooled_rate) + '.')),
-        el('section', { class: 'panel benchmark-note' }, text('h2', '03 / Held-out benchmarks'), note('LOO n=' + D.validation.leave_one_out.n + ' · v1 ' + x(D.validation.leave_one_out.v1_x) + ' → v2 ' + x(D.validation.leave_one_out.v2_x) + '. Walk n=' + D.validation.walk_forward.n + ' · ' + x(D.validation.walk_forward.v1_x) + ' → ' + x(D.validation.walk_forward.v2_x) + '. Listing-order snapshot proxy, not historical; shared-token bias remains.'))),
-        el('div', { class: 'detail-column' },
-          el('section', { class: 'panel sensitivity' }, text('h2', '04 / Drop-share × deposit'), text('small', 'Net USD after ALL costs • assumed wallet share at $100 • allocation unverified', 'micro'),
-            el('table', { class: 'matrix', id: 'scenario-matrix' }, el('thead', null, el('tr', null, text('th', 'Share ↓ / pilot →'), D.econ.deposits.map(n => text('th', usd(n))))), el('tbody', null, D.econ.scenario_shares.map(share => el('tr', null, text('th', (share * 1e6).toFixed(1) + ' ppm'), D.econ.deposits.map(dep => { const s = scenario(r, dep, share); return el('td', { class: s.verdict.toLowerCase(), 'data-net': s.net }, text('b', cash(s.net)), text('small', s.verdict)); }))))),
-            note('Base net: ' + cash(e.expected_drop_usd) + ' drop − ' + cash(e.fee_ceiling_usd) + ' fees − ' + cash(e.opportunity_cost_usd + e.capital_risk_charge_usd) + ' capital charges − ' + cash(e.time_cost_usd) + ' time = ' + cash(e.net_usd) + '. Break-even ' + (e.breakeven_share_at_100 * 1e6).toFixed(2) + ' ppm at $100.')),
-          el('section', { class: 'panel plan' }, el('div', { class: 'section-label' }, text('h2', '05 / Conditional farm plan'), text('b', usd(e.capital_ceiling_usd) + ' MAX', 'accent')),
-            note(r.farm_plan.action + ' · ' + e.horizon_days + 'd observation · ' + e.minutes + ' min · 4 fee actions × ' + usd(e.fee_per_action_usd) + '. FARM requires positive net and ≥$15/h surplus AFTER $15/h time cost.'),
-            el('ol', { id: 'farm-plan' }, r.farm_plan.steps.map(s => el('li', null, text('p', s.text), text('small', 'Cost: ' + s.cost + '. Time: ' + s.time + '.')))),
-            note('Principal is assumed returned; full loss is possible. Fees are ceilings, not quotes. No eligibility or reward is established; zero allocation means zero reward.')))),
-      text('footer', 'FROZEN RESEARCH • Odds are cross-sectional prevalence, not a measured launch forecast. 1 ppm = 0.0001% of implied cap at a $100 pilot. All figures are entry estimates.', 'detail-footer micro')];
-  }
-  function render() {
-    root.textContent = '';
-    const r = state.p && D.rows.find(r => r.slug === state.p);
-    root.appendChild(el('div', { class: 'shell' + (r ? ' detail-shell' : '') }, head(), r ? detail(r) : overview()));
-    root.setAttribute('aria-busy', 'false');
-  }
-  readHash(); render();
-  window.addEventListener('hashchange', () => { readHash(); render(); window.scrollTo(0, 0); });
+  const t = (tag,text,cl) => el(tag,{text,...(cl?{class:cl}:{})}), note = s => t('p',s,'note');
+  const badge = s => t('span',s,'badge '+s.toLowerCase());
+  function save(){ const u=new URLSearchParams();for(const [k,v]of Object.entries(state))if(String(v)!==String(({q:'',category:'all',verdict:'all',view:'radar',p:'',sort:'rank',dir:1,deposit:50000,share:.15,weeks:12})[k]))u.set(k,String(v));history.replaceState(null,'','#'+u); }
+  function load(){ const u=new URLSearchParams(location.hash.slice(1));for(const k of ['q','category','verdict','view','p','sort'])state[k]=u.get(k)||({category:'all',verdict:'all',view:'radar',sort:'rank'}[k]||'');for(const [k,def,min,max]of [['deposit',50000,1000,250000],['share',.15,0,.3],['weeks',12,2,52],['dir',1,-1,1]]){const n=Number(u.get(k)??def);state[k]=Number.isFinite(n)?Math.max(min,Math.min(max,n)):def;} }
+  function change(k,v){state[k]=v;save();render();}
+  // Mirrors lib/v3.ts economicCase; browser QA checks every row/scenario/matrix.
+  function scenario(r,deposit=state.deposit,share=state.share,weeks=state.weeks){const c=D.econ,days=weeks*7,minutes=70+weeks*7,fees=4*r.farm_plan.gas_budget_per_action_usd;
+    const drop=r.implied_value_usd*share*deposit/(r.tvl_usd+deposit),capital=deposit*c.capital_apr*days/365,time=minutes/60*c.time_per_hour,hurdle=deposit*c.risk_free_apr*days/365,net=drop-fees-capital-time;
+    return{deposit_usd:deposit,drop_share:share,horizon_weeks:weeks,expected_drop_usd:drop,fees_usd:fees,capital_charge_usd:capital,time_cost_usd:time,minutes,hurdle_usd:hurdle,net_usd:net,net_per_hour_usd:net/(minutes/60),verdict:net<=0?'SKIP':net>hurdle?'FARM':'MARGINAL'};}
+  const active = () => presets.find(p=>p.deposit===state.deposit&&Math.abs(p.share-state.share)<1e-9&&state.weeks===12)?.name||'Custom';
+  const calculated = () => D.rows.map(r=>({...r,...scenario(r)}));
+  function counts(rows){return Object.fromEntries(['FARM','MARGINAL','SKIP'].map(v=>[v,rows.filter(r=>r.verdict===v).length]));}
+  function filtered(){const q=state.q.toLowerCase().trim();return(state.view==='priced'?D.live:calculated()).filter(r=>(state.category==='all'||(r.category||'Other')===state.category)&&(state.verdict==='all'||r.verdict===state.verdict)&&(!q||[r.name,r.slug,r.category,...r.chains].join(' ').toLowerCase().includes(q)));}
+  function download(kind,rows){let body,type,name;
+    if(kind==='evidence'){body=JSON.stringify({provenance:D.provenance,validation:V,accounting:D.accounting,value_model:D.value_model,odds_model:D.odds_model});type='application/json';name='v3-evidence.json';}
+    else{const out=rows.map(r=>({...r,active_scenario:active(),active_economics:state.view==='radar'?scenario(r):null}));
+      if(kind==='json'){body=JSON.stringify({scenario:{name:active(),deposit:state.deposit,drop_share:state.share,weeks:state.weeks},rows:out});type='application/json';name='radar-v3.json';}
+      else{const keys=['rank','slug','name','tvl_usd','value_if_launches_usd','token_odds','implied_value_usd','implied_p10_usd','implied_p25_usd','implied_p75_usd','implied_p90_usd','verdict','net_usd','net_per_hour_usd','deposit_usd','drop_share','horizon_weeks'];const quote=v=>'"'+String(v??'').replaceAll('"','""')+'"';body=[keys.join(','),...out.map(r=>keys.map(k=>quote(r[k])).join(','))].join('\n');type='text/csv';name='radar-v3.csv';}}
+    const url=URL.createObjectURL(new Blob([body],{type})),a=el('a',{href:url,download:name});a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  function head(){return el('header',{class:'mast'},el('div',{class:'brand'},t('b','LM','monogram'),t('b','LATENT MAGNET  /  TOKEN RADAR V3'),badge('FITTED')),el('div',null,t('span','SEALED '+D.as_of+'  ·  '+D.board_size+' ROWS  ·  OFFLINE'),el('button',{id:'export-evidence',text:'Evidence JSON ↓',onclick:()=>download('evidence')})));}
+  function kpi(label,value,sub){return el('article',{class:'kpi'},t('small',label),t('strong',value),t('small',sub));}
+  function minis(title,headers,rows,id){return el('section',{class:'panel evidence'},t('h2',title),el('table',{class:'mini',id},el('thead',null,el('tr',null,headers.map(s=>t('th',s)))),el('tbody',null,rows.map(cells=>el('tr',null,cells.map((s,i)=>t('td',s,i===cells.length-1?(s==='KEEP'?'positive':s==='DROP'?'muted':''):'')))))));}
+  function evidence(){return el('div',{class:'evidence-grid'},
+    minis('01 / VALUE · forward additions',['Candidate','LOO ×','Walk ×','Call'],V.value_ablation.map(a=>[a.term,a.loo.toFixed(3),a.wf.toFixed(3),a.kept?'KEEP':'DROP']),'value-ablation'),
+    minis('02 / RECORD LOGIT · Brier ↓',['Candidate','LOO','10-fold','Walk','Call'],V.odds_ablation.map(a=>[a.term,a.loo.toFixed(4),a.ten.toFixed(4),a.wf.toFixed(4),a.kept?'KEEP':'DROP']),'odds-ablation'),
+    minis('03 / RANGE HONESTY · conditional cap',['Held-out','n','IQR / 50%','P10–90 / 80%'],V.coverage.map(c=>[c.split,c.n,prob(c.p25_p75/c.n),prob(c.p10_p90/c.n)]).concat([
+      ['Value v2 → fitted','LOO',V.value_loo.v2_x.toFixed(3),V.value_loo.fitted_x.toFixed(3)],['Value v2 → fitted','Walk',V.value_wf.v2_x.toFixed(3),V.value_wf.fitted_x.toFixed(3)],['Brier / base','10-fold',V.odds_ten.brier.toFixed(4),V.odds_ten.base.toFixed(4)],['Brier / base','Walk',V.odds_wf.brier.toFixed(4),V.odds_wf.base.toFixed(4)],['Selection reused','not test','record ≠ launch','snapshot ≠ history']]),'range-honesty'));}
+  let integrity={totals:false,checksum:false,ledger:false};
+  function accounting(){const entries=Object.entries(D.accounting.counts);return el('div',{class:'accounting'},el('div',{class:'accounting-labels'},t('b','UNIVERSE '+D.universe_size),entries.map(([k,n],i)=>el('span',{'data-group':k},t('i','',`swatch c${i}`),k+' '+n)),t('span','off-list / parent unknown: '+(D.accounting.counts['off-list / parent unknown']||0))),el('div',{class:'stack'},entries.map(([k,n],i)=>el('i',{class:'c'+i,style:'width:'+100*n/D.universe_size+'%',title:k+' '+n}))));}
+  function strip(){return el('div',{class:'integrity',id:'integrity'},...['totals','checksum','ledger'].map(k=>t('span',(integrity[k]?'✓ ':'… ')+({totals:'totals equal 758',checksum:'board SHA = main.ts',ledger:'complete held-out ledgers'}[k]),integrity[k]?'positive':'')),t('span','INPUT '+D.snapshot_sha256.slice(0,12)),t('span','MAIN '+D.provenance.main_sha256.slice(0,12)));}
+  function scenarioGrid(){return el('section',{class:'scenario-grid','aria-label':'Open scenario grid'},presets.map(p=>{const c=counts(D.rows.map(r=>scenario(r,p.deposit,p.share,12)));return el('button',{class:'preset'+(active()===p.name?' selected':''),'data-preset':p.name,'aria-pressed':active()===p.name,onclick:()=>{Object.assign(state,{deposit:p.deposit,share:p.share,weeks:12});save();render();}},el('div',null,t('b',p.name+(p.name==='Mid'?' · default':'')),t('span',cash(p.deposit)+' · '+prob(p.share)+' drop · 12w')),el('div',{class:'preset-counts'},...['FARM','MARGINAL','SKIP'].map(k=>t('span',c[k]+' '+k,k==='FARM'?'positive':''))));}));}
+  function controls(){function select(id,values,label,value,onchange){const n=el('select',{id,'aria-label':label},values.map(([v,s])=>el('option',{value:v,text:s})));n.value=value;n.addEventListener('change',()=>onchange(n.value));return n;}
+    const query=el('input',{id:'q',type:'search',value:state.q,placeholder:'Search protocol / category / chain','aria-label':'Search protocols'});query.addEventListener('input',()=>{const v=query.value;change('q',v);document.getElementById('q').focus();});
+    const source=state.view==='priced'?D.live:D.rows, cc=counts(calculated());
+    const slider=(id,label,val,min,max,step,format)=>el('label',{class:'slider'},t('span',label+' '+format(val)),el('input',{id,type:'range',min,max,step,value:val,'aria-label':label,oninput:e=>{const focus=e.target.id;change(id,Number(e.target.value));document.getElementById(focus).focus();}}));
+    return el('div',{class:'controls'},el('div',{class:'control-line'},query,select('category',[['all','All categories'],...[...new Set(source.map(r=>r.category||'Other'))].sort().map(c=>[c,c])],'Category',state.category,v=>change('category',v)),el('div',{class:'tabs view-tabs'},['radar','priced'].map(v=>el('button',{'data-view':v,'aria-pressed':state.view===v,text:v==='radar'?'No token recorded':'Priced peers',onclick:()=>{state.category='all';state.verdict='all';change('view',v);}}))),el('button',{class:'reset',text:'Reset filters',onclick:()=>{Object.assign(state,{q:'',category:'all',verdict:'all',view:'radar',sort:'rank',dir:1});save();render();}})),
+      el('div',{class:'control-line economy-controls'},el('div',{class:'tabs verdict-tabs'},['all','FARM','MARGINAL','SKIP'].map(v=>el('button',{'data-verdict':v,'aria-pressed':state.verdict===v,text:(v==='all'?'All':v)+' '+(v==='all'?D.rows.length:cc[v]),onclick:()=>change('verdict',v)}))),el('label',{class:'deposit'},'Deposit ',select('deposit',Array.from(new Set([1000,5000,10000,25000,50000,100000,250000,state.deposit])).sort((a,b)=>a-b).map(n=>[n,cash(n)]),'Deposit',state.deposit,v=>change('deposit',Number(v)))),slider('share','Drop share',state.share,0,.3,.005,prob),slider('weeks','Horizon',state.weeks,2,52,1,n=>n+'w'),t('b',active().toUpperCase(),'active-scenario')));}
+  function sortHead(key,label){return el('th',{'aria-sort':state.sort===key?(state.dir>0?'ascending':'descending'):'none'},el('button',{text:label+(state.sort===key?(state.dir>0?' ↑':' ↓'):''),onclick:()=>{state.dir=state.sort===key?-state.dir:key==='rank'||key==='name'?1:-1;state.sort=key;save();render();}}));}
+  const low=Math.log10(Math.min(...D.rows.map(r=>r.implied_p10_usd))),high=Math.log10(Math.max(...D.rows.map(r=>r.implied_p90_usd))),pos=n=>100*(Math.log10(Math.max(1,n))-low)/(high-low);
+  function rangebar(r){return el('div',{class:'rangebar',title:'Common log axis: thin=P10–P90, thick=P25–P75, dot=point; score uncertainty omitted'},el('em',{style:`left:${pos(r.implied_p10_usd)}%;width:${pos(r.implied_p90_usd)-pos(r.implied_p10_usd)}%`}),el('i',{style:`left:${pos(r.implied_p25_usd)}%;width:${pos(r.implied_p75_usd)-pos(r.implied_p25_usd)}%`}),el('b',{style:`left:${pos(r.implied_value_usd)}%`}));}
+  function board(list){list=list.slice().sort((a,b)=>{const av=a[state.sort],bv=b[state.sort];return av==null?1:bv==null?-1:(av<bv?-1:av>bv?1:0)*state.dir||a.rank-b.rank;});return el('div',{class:'panel table-wrap'},el('table',{id:'radar-table',class:'radar-table'},el('colgroup',null,[4,17,7,5,6,7,9,10,16,8,11].map(w=>el('col',{style:'width:'+w+'%'}))),el('thead',null,el('tr',null,...[['rank','#'],['name','Protocol / record'],['tvl_usd','TVL'],['change_7d','7d'],['age_days','Listed'],['token_odds','Record odds¹'],['value_if_launches_usd','If launches'],['implied_value_usd','Weighted value'],['implied_p25_usd','Weighted IQR / log'],['verdict','Verdict'],['net_per_hour_usd','Net / hour']].map(a=>sortHead(...a)))),el('tbody',null,list.map(r=>el('tr',{'data-slug':r.slug,tabindex:0,onclick:()=>change('p',r.slug),onkeydown:e=>{if(e.key==='Enter')change('p',r.slug);}},t('td',String(r.rank).padStart(2,'0'),'rank'),el('td',{class:'protocol'},t('b',r.name),t('small',(r.watchlist?'WATCH · ':'EARLY · ')+(r.category||'Other'))),t('td',usd(r.tvl_usd),'num'),t('td',pct(r.change_7d),'num '+(r.change_7d>=0?'positive':'negative')),el('td',{class:'num'},t('span',r.age_days==null?'?':(r.age_days/365).toFixed(1)+'y'),t('small','listing age')),t('td',prob(r.token_odds),'num'),t('td',usd(r.value_if_launches_usd),'num'),el('td',{class:'num'},t('b',usd(r.implied_value_usd),'accent'),t('small','cap × record score')),el('td',{class:'num'},t('span',usd(r.implied_p25_usd)+'–'+usd(r.implied_p75_usd),'range-label'),rangebar(r)),el('td',null,badge(r.verdict)),el('td',{class:'num '+(r.net_usd>0?'positive':'negative'),'data-net':r.net_usd},t('b',cash(r.net_per_hour_usd)),t('small','net '+cash(r.net_usd))))))));}
+  function benchmarks(list){return el('section',{class:'panel table-wrap'},el('table',{id:'benchmark-table',class:'benchmark-table'},el('thead',null,el('tr',null,['Protocol','Category','TVL','Recorded cap','Cap / TVL','Token ID'].map(s=>t('th',s)))),el('tbody',null,list.map(r=>el('tr',null,...[r.name,r.category,usd(r.tvl_usd),usd(r.mcap_usd),x(r.mcap_usd/r.tvl_usd),r.gecko_id||r.symbol].map(s=>t('td',s)))))));}
+  function overview(){const list=filtered(),c=counts(calculated()),wf=V.coverage[1];return [el('div',{class:'intro'},t('h1','Fit the value. Expose the assumptions.'),t('span','Fitted diagnostics from one sealed snapshot · no launch forecast','muted')),
+    el('section',{class:'kpis'},kpi('VALUE MISS / WALK-FORWARD',x(V.value_wf.fitted_x),'v2 '+x(V.value_wf.v2_x)+' · n='+V.value_wf.n),kpi('RECORD BRIER / TEN-FOLD',V.odds_ten.brier.toFixed(4),'base '+V.odds_ten.base.toFixed(4)+' · WF '+V.odds_wf.brier.toFixed(4)),kpi('RANGE COVERAGE / WALK',prob(wf.p25_p75/wf.n)+' / '+prob(wf.p10_p90/wf.n),'P25–75 / P10–90 · conditional cap'),kpi('TERMS SURVIVED',V.value_terms.length+'/7 · '+V.odds_terms.length+'/6','value / odds · fixed forward gate'),kpi('WORTH FARMING / '+active().toUpperCase(),c.FARM+' / '+D.board_size,c.MARGINAL+' MARGINAL · '+c.SKIP+' SKIP'),kpi('WATCHLIST / EARLY',D.watchlist_size+'/'+D.watchlist_size+' · '+D.early_size,'floor covered · no token recorded')),
+    evidence(),accounting(),strip(),scenarioGrid(),controls(),
+    el('div',{class:'results',id:'filter-summary','data-rows':list.length},t('b',state.view==='priced'?'PRICED RECORDS':state.verdict==='FARM'?'FARM SHORTLIST':'ODDS-WEIGHTED BOARD'),t('span',list.length+' rows · '+active()+' · '+cash(state.deposit)+' / '+prob(state.share)+' / '+state.weeks+'w'),el('div',{class:'exports'},el('button',{id:'export-csv',text:'CSV ↓',onclick:()=>download('csv',list)}),el('button',{id:'export-json',text:'JSON ↓',onclick:()=>download('json',list)}))),
+    !list.length?el('div',{class:'panel empty',text:'No rows in this filter at the displayed scenario. Scenario counts above are recalculated openly.'}):state.view==='priced'?benchmarks(list):board(list),
+    note('¹ Priced-token record classification, NOT launch probability. Conditional residual coverage ≠ weighted-range coverage. All choices reuse validation splits. Full ledgers: Evidence JSON. Parent data absent; exclusion labels are observational.'),
+    el('details',{class:'panel methodology'},t('summary','Model limitations, exact rules & accounting'),note(V.limitation),note(V.selection),note(D.accounting.note),note('Conservative is the original brief base (all 198 SKIP). Mid is the openly selected UI scenario, never a claim of likely allocation. 5% capital charge plus $15/h time; compare remaining net with 4% APR T-bill hurdle. No launch dates, rewards or eligibility are observed. Source: model.txt / proof.json / method.txt.'))];}
+  function detail(r){const e=scenario(r),fact=(label,value)=>el('div',null,t('small',label),t('b',value));const rows=V.value_ablation.map(a=>{const d=r.model.decomposition.find(d=>d.term===a.term);return[a.term,d?d.log_effect.toFixed(4):'—',d?x(Math.exp(d.log_effect)):'dropped',a.loo.toFixed(3)+' / '+a.wf.toFixed(3),a.kept?'KEEP':'DROP'];});
+    return [el('div',{class:'detail-nav'},el('button',{text:'← Back to radar',onclick:()=>change('p','')}),t('span','MODEL DOSSIER / RANK '+r.rank+' OF '+D.board_size,'muted')),el('div',{class:'detail-hero'},el('div',null,t('h1',r.name,'detail-name'),t('small',(r.category||'Other')+' · '+r.chains.join(', ')+' · no token recorded')),el('div',null,badge(e.verdict),t('small',active()+' · '+cash(state.deposit)+' / '+prob(state.share)+' / '+state.weeks+'w'))),
+      el('section',{class:'kpis detail-kpis'},kpi('IF IT LAUNCHES',usd(r.value_if_launches_usd),'fitted conditional cap'),kpi('RECORD CLASSIFIER',prob(r.token_odds),'not launch probability'),kpi('WEIGHTED IMPLIED',usd(r.implied_value_usd),'conditional cap × score'),kpi('EXPECTED DROP',cash(e.expected_drop_usd),'scenario allocation'),kpi('NET / NET PER HOUR',cash(e.net_usd)+' / '+cash(e.net_per_hour_usd),'after fees, capital, time'),kpi('T-BILL HURDLE',cash(e.hurdle_usd),'4% APR × '+state.weeks+' weeks')),
+      el('div',{class:'detail-grid'},el('div',{class:'detail-column'},
+        minis('01 / FITTED TERM DECOMPOSITION',['Term','Log effect','Factor','LOO / WF ×','Call'],rows,'decomposition'),note('TVL × exp(sum log effects) = '+usd(Math.round(r.tvl_usd*Math.exp(r.model.log_multiple)))+'. Family '+r.model.family+'; unseen identity = zero. Held-out columns show each candidate addition, not causal importance.'),
+        el('section',{class:'panel peers'},t('h2','02 / NEAREST PRICED PEERS'),el('table',{id:'nearest-peers',class:'mini'},el('thead',null,el('tr',null,['Peer / category','TVL','Cap','Multiple'].map(s=>t('th',s)))),el('tbody',null,r.nearest_peers.map(p=>el('tr',null,el('td',null,t('b',p.name),t('small',p.category||'Other')),t('td',usd(p.tvl_usd)),t('td',usd(p.mcap_usd)),t('td',x(p.multiple)))))),note('Distance = |log TVL ratio| + 1 if category differs. Shared token identity can inflate apparent independence.')),
+        el('section',{class:'panel benchmarks'},t('h2','03 / BENCHMARKS & RESIDUAL RANGE'),el('div',{class:'facts'},fact('LOO: v2 → fitted',x(V.value_loo.v2_x)+' → '+x(V.value_loo.fitted_x)),fact('Walk: v2 → fitted',x(V.value_wf.v2_x)+' → '+x(V.value_wf.fitted_x)),fact('Conditional IQR',usd(r.value_p25_usd)+'–'+usd(r.value_p75_usd)),fact('Conditional P10–90',usd(r.value_p10_usd)+'–'+usd(r.value_p90_usd)),fact('Weighted IQR',usd(r.implied_p25_usd)+'–'+usd(r.implied_p75_usd)),fact('Weighted P10–90',usd(r.implied_p10_usd)+'–'+usd(r.implied_p90_usd))),note('WF conditional coverage '+prob(V.coverage[1].p25_p75/V.coverage[1].n)+' / '+prob(V.coverage[1].p10_p90/V.coverage[1].n)+'. Weighted range holds one score fixed; its uncertainty is omitted.')),
+        el('details',{class:'panel'},t('summary','Record logit decomposition / held-out Brier'),el('table',{class:'mini',id:'odds-decomposition'},el('thead',null,el('tr',null,['Term','Feature','β','Logit effect','LOO / WF'].map(s=>t('th',s)))),el('tbody',null,V.odds_ablation.map(a=>{const d=r.model.odds_decomposition.find(d=>d.term===a.term);return el('tr',null,...[a.term,d?d.feature.toFixed(3):'dropped',d?d.coefficient.toFixed(3):'—',d?d.log_effect.toFixed(3):'—',a.loo.toFixed(4)+' / '+a.wf.toFixed(4)].map(s=>t('td',s)));}))),note(D.odds_model.label))),
+      el('div',{class:'detail-column'},el('section',{class:'panel sensitivity'},t('h2','04 / DROP SHARE × DEPOSIT · NET USD'),t('small','Horizon '+state.weeks+'w · green=FARM / amber=MARGINAL / red=SKIP'),el('table',{class:'matrix',id:'scenario-matrix'},el('thead',null,el('tr',null,t('th','Share ↓'),[1000,10000,50000,100000].map(n=>t('th',usd(n))))),el('tbody',null,[.07,.15,.25].map(share=>el('tr',null,t('th',prob(share)),[1000,10000,50000,100000].map(dep=>{const s=scenario(r,dep,share);return el('td',{class:s.verdict.toLowerCase(),'data-net':s.net_usd,'data-verdict':s.verdict},t('b',cash(s.net_usd)),t('small',s.verdict));}))))),note('Drop '+cash(e.expected_drop_usd)+' − fees '+cash(e.fees_usd)+' − capital '+cash(e.capital_charge_usd)+' − time '+cash(e.time_cost_usd)+' = net '+cash(e.net_usd)+'. Hurdle '+cash(e.hurdle_usd)+'.')),
+        el('section',{class:'panel plan'},el('div',{class:'section-label'},t('h2','05 / CONDITIONAL FARM PLAN'),t('b',cash(state.deposit)+' SCENARIO','accent')),t('small','Eligibility unknown · '+e.minutes+' min total · '+state.weeks+' weeks · ceiling '+cash(e.fees_usd)+' for 4 actions'),el('ol',{id:'farm-plan'},r.farm_plan.steps.map((s,i)=>{const text=s.text.replaceAll('$10,000',cash(state.deposit)).replaceAll('84 days',state.weeks*7+' days');return el('li',null,el('div',null,badge(s.type),t('p',text)),el('div',{class:'chips'},t('span',i===2||i===4?cash(2*r.farm_plan.gas_budget_per_action_usd)+' fees':'$0 fees','chip'),t('span',(i===3?state.weeks*7:s.minutes)+' min','chip')));})),note('Exit rule: stop if access, minimum, quoted fees, terms or liquidity fail your budget. Test a small redemption before unwinding; revoke unused approvals. Principal can be lost and rewards can be zero.')))),
+      t('footer','FROZEN RESEARCH / All valuations, scores and farm economics are snapshot-derived scenarios. Plans require independent verification. No launch timing or reward established.','detail-footer note')];}
+  function render(){const r=state.p&&D.rows.find(r=>r.slug===state.p);root.textContent='';root.appendChild(el('div',{class:'shell'+(r?' detail-shell':'')},head(),r?detail(r):overview()));root.setAttribute('aria-busy','false');}
+  async function verify(){const groups=Object.values(D.accounting.groups).flat(),vf=V.value_folds,of=V.odds_folds;
+    integrity.totals=groups.length===D.universe_size&&new Set(groups).size===D.universe_size;
+    integrity.ledger=[['loo',V.value_loo.n],['wf',V.value_wf.n]].every(([k,n])=>vf[k].length===n)&&[['loo',V.odds_loo.n],['ten',V.odds_ten.n],['wf',V.odds_wf.n]].every(([k,n])=>of[k].length===n&&new Set(of[k].map(f=>f.slug)).size===n);
+    const b=new TextEncoder().encode(JSON.stringify({rows:D.rows})+'\n'),hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b))).map(n=>n.toString(16).padStart(2,'0')).join('');integrity.checksum=hash===D.provenance.board_sha256;window.RADAR_INTEGRITY={...integrity,board_sha256:hash};render();}
+  window.RADAR_SCENARIO=scenario;load();render();verify().catch(e=>{window.RADAR_INTEGRITY={error:String(e)};});
+  addEventListener('hashchange',()=>{load();render();scrollTo(0,0);});
 })();

@@ -231,12 +231,14 @@ export function buildV3(s: Snapshot) {
 // Rich exact ledgers also remain in root data.js for browser inspection/export.
 export function dossierProof(s: Snapshot, radar: ReturnType<typeof buildV3>['radar'], sha: string) {
   const v = radar.validation, index = new Map(s.protocols.map((p, i) => [p.slug, i]));
+  const pack = (a: Array<number | null | undefined>) => a.map(x => x == null ? '-' : x.toString(36)).join('.');
   return { snapshot_sha256: sha, engine: v.selected_engine, selection: v.selection, limitation: LIMITATION,
     value_ablation: v.value_ablation, odds_ablation: v.odds_ablation, value_loo: v.value_loo, value_wf: v.value_wf,
     odds_loo: v.odds_loo, odds_ten: v.odds_ten, odds_wf: v.odds_wf, coverage: v.coverage,
-    ledger_schema: { value: '[snapshot index, actual cap, v2 cap, fitted cap, P10, P25, P75, P90]', odds: '[snapshot index, y, LOO p, ten-fold p, WF p or null, WF base or null]' },
-    value_ledger: Object.fromEntries(Object.entries(v.value_folds).map(([k, fs]) => [k, fs.map(f => [index.get(f.slug), f.actual, f.baseline, f.predicted, ...f.bounds])])),
-    odds_ledger: v.odds_folds.loo.map((f, i) => { const ten = v.odds_folds.ten[i]!, wf = v.odds_folds.wf.find(q => q.slug === f.slug); return [index.get(f.slug), f.y, rounded(f.p), rounded(ten.p), wf ? rounded(wf.p) : null, wf ? rounded(wf.base) : null]; }),
-    odds_schema_precision: 'probabilities rounded to 6 decimals in dossier only; exact values/LOO and ten-fold bases plus training counts in data.js',
+    ledger_encoding: 'Dot-separated base36 unsigned integers; - means null. Decode with parseInt(field,36). All targets retained; exact rich ledgers also in data.js. Snapshot index is zero-based sealed protocol order.',
+    ledger_schema: { value: '[snapshot index, actual cap, v2 cap, fitted cap, P10, P25, P75, P90]', odds: '[snapshot index, y, round(LOO p*1e6), round(ten-fold p*1e6), round(WF p*1e6) or null, round(WF base*1e6) or null]' },
+    value_ledger: Object.fromEntries(Object.entries(v.value_folds).map(([k, fs]) => [k, fs.map(f => pack([index.get(f.slug), f.actual, f.baseline, f.predicted, ...f.bounds]))])),
+    odds_ledger: v.odds_folds.loo.map((f, i) => { const ten = v.odds_folds.ten[i]!, wf = v.odds_folds.wf.find(q => q.slug === f.slug); return pack([index.get(f.slug), f.y, Math.round(f.p * 1e6), Math.round(ten.p * 1e6), wf ? Math.round(wf.p * 1e6) : null, wf ? Math.round(wf.base * 1e6) : null]); }),
+    odds_schema_precision: '6 decimals in dossier only; exact values/LOO and ten-fold bases plus training counts in data.js',
     accounting: radar.accounting.counts, economics: ECON };
 }

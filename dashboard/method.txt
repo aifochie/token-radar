@@ -1,34 +1,3 @@
-LATENT MAGNET V2 / READ WITH model.txt AND proof.json
-
-model.txt is the executable estimation source, included WHOLE. proof.json holds
-all 16 ablations and full held-out ledgers: [slug, actual cap, v1, v2, P25, P75].
-No source or model evidence is omitted. The baseline is frozen before these tests.
-
-forecast(): TVL times category/global clipped median times retained growth,
-maturity and completeness. Mask 15 retains all four original v1 terms. Every
-term's removal is evaluated on both splits; no change may worsen either median.
-The guard retains v1 when no ablation improves both. Selection reuses validation;
-it is not an independent test. Common token IDs can duplicate token economics.
-
-validateModel(): remove the target, refit peers, compare with its recorded cap.
-Walk-forward uses strictly earlier listing cohorts, minimum 24 priced records;
-unknown dates are excluded. All features are from ONE snapshot, so listing order
-is not a historical backtest. Median x-error = median(max(pred/actual,actual/pred)).
-dispersion(): raw peer P25/P75, category n>=5 else pooled, times signal factors.
-It is dispersion, not calibrated confidence; point can fall outside its band.
-Rank envelopes compare interval bounds, not a confidence set. Nearest peers use
-absolute log TVL distance; all pool records, not only the nine shown, set value.
-
-fitOdds(): positives are priced records; controls still record no token; unknown
-price outcomes are excluded. Priors, shrinkage strength and age cuts are learned
-from snapshot counts. This prevalence proxy has censoring and survivor bias;
-eventual launch odds and horizon hazards are unidentifiable from one snapshot.
-
-economicCase(): reward = odds * implied cap * assumed wallet allocation. Allocation,
-fees, 5% opportunity APR, 1% capital risk charge and $15/hour are scenarios. Central
-share is 1 ppm at $100; scale min(pilot/100,2). 1 ppm = 0.0001%. Horizon affects
-costs only. Principal is assumed returned, but full loss and zero rewards are
-possible. Net charges 4 fee actions, capital costs and time. FARM requires net>0
-and >=$15/hour surplus AFTER the $15/hour time charge; positive lower net is
-MARGINAL; else SKIP. Eligibility, integrations and distributions are unverified.
-No token recorded is not proof of no token. These are entry estimates, not FDV.
+V3 / model.txt is the exact fitting + economics source from lib/v3.ts. Evaluation/assembly/packing code is in that repository file (SHA in proof.json). All 182 value folds and 419 odds targets remain in reversible base36 in proof.json; exact rich ledgers, training counts, coefficients and accounting members are in data.js. Export Evidence JSON offline.
+Fixed forward selection reuses validation: no independent test. Equal listing dates stay out of one another's WF training. Value warm-up 24; odds 48. Ten-fold = stable slug hash modulo ten. Baseline = training rate. Category encoding omits each training-row label. Family = gecko ID or version-normalized slug; shared tokens can bias scores.
+Residual coverage is conditional cap, not weighted value or launch outcomes. Weighted bands hold one record score fixed. One cross-section cannot identify launch, eligibility or rewards. board.json keeps original $10,000/7%/12w economics. UI openly defaults to Mid $50,000/15%/12w. APRs 5% capital/4% hurdle and $15/h time are assumptions. Plans require verified access/quotes and an exit test; principal and rewards can be lost.
