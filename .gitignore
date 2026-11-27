@@ -5,6 +5,8 @@ build-output-repeat/
 revision-output/
 revision-output-repeat/
 final-output/
+v2-output-a/
+v2-output-b/
 node_modules/
 .makefun/
 

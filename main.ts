@@ -1,10 +1,12 @@
 // Node 22, standard library only. Local run:
-// node main.ts --input kit/input/snapshot.json --output .build/output --screenshots kit/starter/screenshots
+// node main.ts --input kit/input/snapshot.json --output v2-output-a
 // --screenshots selects existing images; it never captures or fabricates one.
 import { copyFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { boardIssue, buildRadar, dataScript, parseSnapshot } from './lib/model.ts';
+import { createHash } from 'node:crypto';
+import { boardIssue, dataScript, parseSnapshot } from './lib/model.ts';
+import { buildV2 } from './lib/v2.ts';
 import { buildDossier, PLAIN_NAME } from './vendor/makefun-board.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
@@ -61,7 +63,8 @@ function run(): void {
   if (existsSync(out) && (!lstatSync(out).isDirectory() || readdirSync(out).length)) throw new Error('output must be an empty directory or a new path');
 
   const snapshot = parseSnapshot(readFileSync(inputFile, 'utf8'));
-  const { board, radar } = buildRadar(snapshot);
+  const { board, radar } = buildV2(snapshot);
+  const snapshotSha = createHash('sha256').update(readFileSync(inputFile)).digest('hex');
   const issue = boardIssue(board, snapshot);
   if (issue !== null) throw new Error(`board refused: ${issue}`);
   const sourceFiles = plainTree(dashboard);
@@ -72,8 +75,12 @@ function run(): void {
 
   mkdirSync(out, { recursive: true });
   writeFileSync(join(out, 'board.json'), `${JSON.stringify({ rows: board })}\n`);
-  writeFileSync(join(out, 'data.js'), dataScript(radar));
+  writeFileSync(join(out, 'data.js'), dataScript({ ...radar, snapshot_sha256: snapshotSha } as any));
   copyTree(dashboard, join(out, 'dashboard'), sourceFiles);
+  writeFileSync(join(out, 'dashboard', 'proof.json'), JSON.stringify({ snapshot_sha256: snapshotSha, validation: radar.validation, odds: radar.odds_model, accounting: radar.accounting }) + '\n');
+  copyFileSync(join(here, 'lib/v2.ts'), join(out, 'dashboard', 'model.txt'));
+  const dashboardBytes = plainTree(join(out, 'dashboard')).reduce((n, file) => n + readFileSync(join(out, 'dashboard', file)).length, 0);
+  if (dashboardBytes > 65_536) throw new Error(`dashboard source exceeds 64 KiB: ${dashboardBytes}`);
   copyTree(screenshots, join(out, 'screenshots'), shots);
   const dossier = buildDossier(out, {
     text_max_bytes: 65_536,
