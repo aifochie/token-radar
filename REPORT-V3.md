@@ -1,6 +1,6 @@
 # MISI V3 — Token Radar / fitted engine
 
-Status bertahap: **A LOLOS guard; B LOLOS; C belum dijalankan.** Belum ada klaim siap submit atau dev grade. Sesi OpenCode native: `ses_de5883638ffeHfJ0CgenXtei7A` (metadata session diperiksa langsung, tanpa membuat transcript atau run record). Baseline v2 tersimpan dalam commit lokal `351d1df` (`v2 baseline`). Checkpoint A: `5568061`.
+Status akhir worker: **A LOLOS guard; B LOLOS; C mencapai target pengecualian tunggal. Check resmi tetap exit 1 karena `transcripts_run_record`.** Belum siap submit; pengemasan run record/context adalah tanggung jawab mandor. Tidak ada klaim dev grade. Sesi OpenCode native: `ses_de5883638ffeHfJ0CgenXtei7A`. Baseline v2: `351d1df`; checkpoint A: `5568061`; checkpoint B: `4e3e9ab`.
 
 ## Checkpoint A — fitted ridge value + logit odds
 
@@ -140,3 +140,60 @@ Kedua arah validator **exit 0**: **12/12 file byte-identical, 0 beda**. Board **
 Kegagalan pengembangan yang diperbaiki: satu kurung JavaScript berlebih, path package Puppeteer berbeda dari asumsi, event download CDP lama yang tidak terbit meski file telah terunduh, dan validator raw-object yang membedakan `-0` dari `0` sesudah JSON menormalkannya. Pemeriksaan order invariance kini membandingkan bentuk serialisasi JSON yang memang merupakan kontrak output; tidak ada nilai model atau gate data yang dilonggarkan. Output/source draft yang melewati byte limit ditolak, lalu dipangkas nyata.
 
 Sisa masalah pada penutupan B: check kit belum dijalankan; run record/context pengemasan tetap urusan mandor. Coverage P10–P90 WF hanya 73,02% terhadap nominal 80%; odds bukan launch forecast; validasi masih reuse split. Tidak ada klaim jaminan return, independensi penuh, dev rank, atau siap submit.
+
+## Checkpoint C — target worker tercapai; satu failure yang dikecualikan
+
+Check resmi dijalankan **TEPAT SATU KALI**, kit **0.1.0 / level 57 / build 04828c52af6f**. Mulai **2026-11-27T16:07:55,811Z**, selesai **16:08:44,016Z**; receipt lokal **16:07:58,193Z**. Source yang diperiksa adalah **`worktree@e8f00ea4a86f`**, setelah commit B dan dengan helper C saat itu; bukan klaim pemeriksaan atas commit laporan C yang baru dibuat sesudahnya.
+
+```sh
+MAKEFUN_OFFLINE=1 MAKEFUN_CREDENTIALS=<path lokal yang tidak ada> \
+node kit/cli/makefun.mjs check --kit kit --repo . --worktree \
+  --transcripts v3-evidence/probe-native/opencode.db --json
+```
+
+Perintah dijalankan sekali oleh `scripts/check-kit-v3.mjs`, dengan environment whitelist, mode offline dan path akses yang tidak ada. **Exit 1, `ok:false`, stderr kosong.** Output check utuh: **`KIT-CHECK-V3.json`**. Command, waktu, exit dan stdout/stderr utuh: **`v3-evidence/kit-check-v3.json`**.
+
+| Check resmi | Status | Bukti ringkas |
+| --- | --- | --- |
+| prerequisites | skip | diperiksa sendiri: Node 24.22.1 dan Chrome berjalan |
+| competition_open | pass | receipt dalam window |
+| snapshot | pass | 33 file, 984.080 byte saat check |
+| license_osi | pass | MIT/SPDX |
+| entrypoint | pass | main.ts/node22 |
+| strategy_note | skip | tidak diminta |
+| committed_secret | skip | tidak memakai dotenv |
+| transcripts_present | pass | 3 sesi OpenCode native |
+| transcripts_recorded | pass | native record/export row asli |
+| thinking_wellformed | pass | 411 pesan, 202 tool results; 1 call masih berjalan saat snapshot |
+| thinking_in_window | pass | 620 timestamp dalam window |
+| thinking_committed | skip | tidak ada tanda tangan |
+| thinking_reproduces | pass | 1.065/2.473 baris = 43,0%; main.ts 17 authored lines |
+| thinking_on_task | skip | kit tidak menamai task terms |
+| thinking_turns | pass | 45 turns, minimum 5 |
+| thinking_priced | pass | 204 usage records dikenali |
+| thinking_revised | pass | validator berasal dari 4 pesan; main.ts 3 |
+| thinking_fresh | skip | repo GitHub tanpa beacon root |
+| **transcripts_run_record** | **FAIL** | tidak ada run record pengemasan |
+| thinking_own_work | pass | 0 borrowed/downloaded runs yang melanggar |
+| repo_public | submission | hanya situs dapat memeriksa |
+| repo_owner | submission | hanya situs dapat memeriksa |
+| repo_created_after_open | submission | hanya situs dapat memeriksa |
+| commit_in_repo | submission | hanya situs dapat memeriksa |
+| duplicate_snapshot | submission | hanya situs dapat memeriksa |
+| **Tally** | **13 pass / 1 fail / 6 skip / 5 submission-only** | **Tidak ada failure lain** |
+
+Alasan failure persis: **“the upload carries no run record (a bundle's manifest.run, or makefun-run.json beside loose transcripts), which an entry received from 17 November 2026 (00:00 UTC) must”**.
+
+Tidak dilakukan upaya memperbaiki failure itu, tidak membuat `makefun-run.json`, tidak merekonstruksi system prompt/context, usage ataupun timestamp, dan tidak mengulang check. Salinan SQLite dibuat dari row native yang tidak diubah, dibatasi pada sesi TR3, V2, V3 dan relasi parent/child yang terkait. **`v3-evidence/native-export-v3.json`** menyimpan metadata serta digest row. File SQLite lokal berada di path yang diabaikan Git, untuk dipakai mandor sebagai bahan catatan asli; bukan bundle submission atau pengganti run record resmi.
+
+Notes check yang belum menjadi pass: tidak ada system prompt/instruction-file lengkap dalam upload native ini; kit menyatakan itu bagian wajib pengemasan. `gitleaks` tidak tersedia, sehingga built-in redaction yang dipakai. Rasio reasoning per authored line rendah menghasilkan note yang kit nyatakan bukan rejection/penalti. Lima check submission-only tetap belum dapat dibuktikan lokal. State CLI lokal yang muncul saat check dikecualikan dari source dengan `.gitignore`; isinya tidak diperlukan atau dibaca.
+
+### Sisa masalah dan handoff
+
+1. **Pengemasan mandor:** run record/context asli belum lengkap; check resmi tetap gagal pada pengecualian yang disepakati. Worker tidak menyebut entry siap submit.
+2. Validasi belum independen dari seleksi term; listing-order WF bukan historis; odds bukan ramalan launch. Range P10–P90 WF undercovers nominal 80%. Shared-token/missing-price/censoring bias masih ada.
+3. Mid/Aggressive adalah sensitivitas yang dipilih terbuka, bukan estimasi drop share. Conservative dasar asli tetap seluruhnya SKIP. Tidak ada perubahan ECON/hurdle untuk membuat FARM.
+4. Source dashboard hanya punya sisa **119 byte** terhadap target 64.000; setiap perubahan UI/evidence berikutnya perlu pengukuran ulang dan capture baru bila memengaruhi halaman.
+5. **Tidak ada push, submit, signing, akses wallet, atau panggilan API make.fun.** Semua penulisan lanjutan berada dalam repo ini; Puppeteer/Chrome existing dibaca dari scratch. Commit lokal dilakukan per checkpoint, tanpa rewrite history.
+
+Artefak review lokal: `v3-output-a/` dan `v3-output-b/` (diabaikan Git), dashboard dan screenshots yang dikomit, laporan ini, hasil kit check, serta bukti browser/validator di `v3-evidence/`. Tiga PNG final telah dibaca dan diperiksa secara visual; output runtime tidak berubah setelah dua validator lolos.

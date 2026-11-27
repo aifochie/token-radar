@@ -15,6 +15,8 @@ v3-evidence/probe*
 v3-evidence/radar-v3.csv
 v3-evidence/radar-v3.json
 v3-evidence/v3-evidence.json
+# Local CLI state emitted during the kit check
+.local/
 node_modules/
 .makefun/
 

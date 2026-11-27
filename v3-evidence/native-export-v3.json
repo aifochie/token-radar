@@ -1,0 +1,73 @@
+{
+  "source": "/home/hatch/sepuh1/.local/share/opencode/opencode.db",
+  "output": "/home/hatch/sepuh1/bengkel/projects/token-radar/v3-evidence/probe-native/opencode.db",
+  "method": "Selected native SQLite rows copied unchanged; no transcript reconstruction, system prompt or submission run record",
+  "sessions": [
+    {
+      "id": "ses_de5883638ffeHfJ0CgenXtei7A",
+      "project_id": "global",
+      "directory": "/home/hatch/sepuh1/bengkel/projects",
+      "title": "Token Radar V3: Model Fitted dan Dashboard",
+      "time_created": 1795740387784,
+      "time_updated": 1795795668240
+    },
+    {
+      "id": "ses_de5bfc9faffep9R37w4xwgmGWM",
+      "project_id": "global",
+      "directory": "/home/hatch/sepuh1/bengkel/projects",
+      "title": "Token Radar V2: Model, Dashboard, dan Validasi",
+      "time_created": 1795736745477,
+      "time_updated": 1795738692678
+    },
+    {
+      "id": "ses_de5de7259ffetnamV9v3uXpVup",
+      "project_id": "global",
+      "directory": "/home/hatch/sepuh1/bengkel/projects",
+      "title": "Token Radar: Screenshot Asli dan Bundle Siap Submit",
+      "time_created": 1795734736294,
+      "time_updated": 1795735131743
+    }
+  ],
+  "tables": [
+    {
+      "table": "project",
+      "rows": 1,
+      "unchanged_row_digest": "8dbb4572e9a821cb5cedb5b472477e15428874c718b3c3f620cf2d6f26190e91"
+    },
+    {
+      "table": "session",
+      "rows": 3,
+      "unchanged_row_digest": "ffd4489ea6d8b9c725a6ef219f24f056f63c3fa99d9d55c806846d40d74551b7"
+    },
+    {
+      "table": "message",
+      "rows": 210,
+      "unchanged_row_digest": "c2a49ec5c38b1daa420a7073b65e05da07bd0f342e22a696e78360aa63a68ded"
+    },
+    {
+      "table": "part",
+      "rows": 793,
+      "unchanged_row_digest": "6cedbc95fe69414e93a5f68365ccdcc9408d53671c627db00b3ac4fdfbf5a1e3"
+    },
+    {
+      "table": "session_message",
+      "rows": 0,
+      "unchanged_row_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "table": "session_input",
+      "rows": 0,
+      "unchanged_row_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "table": "session_context_epoch",
+      "rows": 0,
+      "unchanged_row_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "table": "todo",
+      "rows": 15,
+      "unchanged_row_digest": "78b23593572356cb5e25ed6fc48971c58f4c8af888ab165d8f3a3a86f0d76124"
+    }
+  ]
+}
